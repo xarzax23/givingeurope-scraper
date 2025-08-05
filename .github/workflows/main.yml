@@ -1,0 +1,33 @@
+name: Daily GiveEurope Scrape
+
+on:
+  schedule:
+    # A las 7:00 UTC cada día (8:00 CET)
+    - cron:  '0 7 * * *'
+  workflow_dispatch:  # permite dispararlo manualmente desde la UI
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install deps
+        run: pip install -r requirements.txt
+
+      - name: Run scraper
+        run: python obtner_GE_rapido_v2.py
+
+      - name: Commit updated CSV
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: github-actions
+          author_email: actions@github.com
+          message: "Actualiza GE_stock_api.csv"
+          add: GE_stock_api.csv
