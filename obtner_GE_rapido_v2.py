@@ -1,7 +1,7 @@
 import requests, csv, re
 from bs4 import BeautifulSoup
 
-HEADERS = {
+HEADERS = {   
    'Accept': 'application/json, text/plain, */*',
    'Origin': 'https://www.givingeurope.com',
    'Referer': 'https://www.givingeurope.com',
@@ -13,7 +13,7 @@ def extract_pgid_from_html(html):
     soup = BeautifulSoup(html, 'html.parser')
     cfg = soup.find('fg-configurator')
     if cfg and cfg.has_attr('product'):
-        return cfg['product']
+      return cfg['product']
     raise ValueError("No encontré <fg-configurator product=\"...\">")
 
 def fetch_variants(pgid, retry_count=3):
@@ -97,4 +97,4 @@ def main():
     print("CSV generado: GE_stock_api.csv")
 
 if __name__ == '__main__':
-  main()
+    main()
