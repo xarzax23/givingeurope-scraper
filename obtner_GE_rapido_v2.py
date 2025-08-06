@@ -41,6 +41,7 @@ def main():
                 pgid = extract_pgid_from_html(resp.text)
             except ValueError as ve:
                 print(f"  [ERROR] Could not extract pgid: {ve}", file=sys.stderr)
+                print(f"  [DEBUG] HTML recibido (primeros 500 caracteres): {resp.text[:500]}", file=sys.stderr)
                 continue
             except Exception as e:
                 print(f"  [ERROR] An unexpected error occurred while extracting pgid: {e}", file=sys.stderr)
