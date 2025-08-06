@@ -1,4 +1,4 @@
-import requests, csv, re
+import requests, csv, re, sys
 from bs4 import BeautifulSoup
 
 HEADERS = {   
@@ -14,7 +14,7 @@ def extract_pgid_from_html(html):
     cfg = soup.find('fg-configurator')
     if cfg and cfg.has_attr('product'):
       return cfg['product']
-    raise ValueError("No encontré <fg-configurator product=\"...\">")
+    raise ValueError("No encontré <fg-configurator product=\"...">")
 
 def fetch_variants(pgid, retry_count=3):
     url = f'https://components.givingeurope.com/api/v1/products/{pgid}/configurator'
@@ -33,20 +33,20 @@ def main():
 
     rows = []
     for url in urls:
-        print(f"Procesando URL: {url}")
+        print(f"Procesando URL: {url}", file=sys.stderr)
         try:
             resp = requests.get(url, timeout=5)
             resp.raise_for_status()
             try:
                 pgid = extract_pgid_from_html(resp.text)
             except ValueError as ve:
-                print(f"  [ERROR] Could not extract pgid: {ve}")
+                print(f"  [ERROR] Could not extract pgid: {ve}", file=sys.stderr)
                 continue
             except Exception as e:
-                print(f"  [ERROR] An unexpected error occurred while extracting pgid: {e}")
+                print(f"  [ERROR] An unexpected error occurred while extracting pgid: {e}", file=sys.stderr)
                 continue
             opts = fetch_variants(pgid)
-            print(f"  → {len(opts)} variantes encontradas")
+            print(f"  → {len(opts)} variantes encontradas", file=sys.stderr)
             for o in opts:
                 stock_info = o.get('stock') or {}
                 incs = stock_info.get('incomingStocks', [])
@@ -60,15 +60,13 @@ def main():
                     'incomingStocks':   incs
                 })
         except requests.exceptions.RequestException as re:
-            print(f"  [ERROR] Request failed: {re}")
+            print(f"  [ERROR] Request failed: {re}", file=sys.stderr)
         except Exception as e:
-
-            print(f"  [ERROR] {e}")
+            print(f"  [ERROR] {e}", file=sys.stderr)
 
     if not rows:
-        with open('GE_stock_api.csv', 'w', encoding='utf-8') as f:
-            f.write("No se descargo nada")
-        print("No se encontraron datos, se generó un archivo indicando que no se descargo nada.")
+        print("No se descargo nada")
+        print("No se encontraron datos.", file=sys.stderr)
         return
 
     # calculamos máximo de llegadas
@@ -86,23 +84,22 @@ def main():
 
     headers = base_headers + arrival_headers
 
-    with open('GE_stock_api.csv', 'w', newline='', encoding='utf-8') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=headers)
-        writer.writeheader()
-        for r in rows:
-            row = {h: r.get(h, '') for h in base_headers}
-            for idx in range(max_arrivals):
-                date_key = f'arrival_date_{idx+1}'
-                qty_key  = f'arrival_qty_{idx+1}'
-                if idx < len(r['incomingStocks']):
-                    stock_entry = r['incomingStocks'][idx]
-                    row[date_key] = stock_entry.get('expectedArrivalDate','').split('T')[0]
-                    row[qty_key]  = stock_entry.get('quantity','')
-                else:
-                    row[date_key] = row[qty_key] = ''
-            writer.writerow(row)
+    writer = csv.DictWriter(sys.stdout, fieldnames=headers, lineterminator='\n')
+    writer.writeheader()
+    for r in rows:
+        row = {h: r.get(h, '') for h in base_headers}
+        for idx in range(max_arrivals):
+            date_key = f'arrival_date_{idx+1}'
+            qty_key  = f'arrival_qty_{idx+1}'
+            if idx < len(r['incomingStocks']):
+                stock_entry = r['incomingStocks'][idx]
+                row[date_key] = stock_entry.get('expectedArrivalDate','').split('T')[0]
+                row[qty_key]  = stock_entry.get('quantity','')
+            else:
+                row[date_key] = row[qty_key] = ''
+        writer.writerow(row)
 
-    print("CSV generado: GE_stock_api.csv")
+    print("Proceso completado.", file=sys.stderr)
 
 if __name__ == '__main__':
     main()
