@@ -14,7 +14,7 @@ def extract_pgid_from_html(html):
     cfg = soup.find('fg-configurator')
     if cfg and cfg.has_attr('product'):
       return cfg['product']
-    raise ValueError("No encontré <fg-configurator product=\"...">")
+    raise ValueError("No encontré <fg-configurator product='...'>")
 
 def fetch_variants(pgid, retry_count=3):
     url = f'https://components.givingeurope.com/api/v1/products/{pgid}/configurator'
