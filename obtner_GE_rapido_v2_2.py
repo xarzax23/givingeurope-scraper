@@ -2,11 +2,9 @@ import requests, csv, re
 from bs4 import BeautifulSoup
 
 HEADERS = {
-   'Accept': 'application/json, text/plain, */*',
-   'Origin': 'https://www.givingeurope.com',
-   'Referer': 'https://www.givingeurope.com',
-   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-
+    'Accept': 'application/json, text/plain, */*',
+    'Origin': 'https://www.givingeurope.com',
+    'Referer': 'https://www.givingeurope.com'
 }
 
 def extract_pgid_from_html(html):
@@ -16,7 +14,7 @@ def extract_pgid_from_html(html):
         return cfg['product']
     raise ValueError("No encontré <fg-configurator product=\"...\">")
 
-def fetch_variants(pgid, retry_count=3):
+def fetch_variants(pgid):
     url = f'https://components.givingeurope.com/api/v1/products/{pgid}/configurator'
     params = {'locale':'es_ES','layout':'wholesale','country':'ES','color':''}
     r = requests.get(url, params=params, headers=HEADERS, timeout=5)
@@ -37,14 +35,7 @@ def main():
         try:
             resp = requests.get(url, timeout=5)
             resp.raise_for_status()
-            try:
-                pgid = extract_pgid_from_html(resp.text)
-            except ValueError as ve:
-                print(f"  [ERROR] Could not extract pgid: {ve}")
-                continue
-            except Exception as e:
-                print(f"  [ERROR] An unexpected error occurred while extracting pgid: {e}")
-                continue
+            pgid = extract_pgid_from_html(resp.text)
             opts = fetch_variants(pgid)
             print(f"  → {len(opts)} variantes encontradas")
             for o in opts:
@@ -59,10 +50,7 @@ def main():
                     'reserved_units':   stock_info.get('totalOption',0),
                     'incomingStocks':   incs
                 })
-        except requests.exceptions.RequestException as re:
-            print(f"  [ERROR] Request failed: {re}")
         except Exception as e:
-
             print(f"  [ERROR] {e}")
 
     # calculamos máximo de llegadas
@@ -97,4 +85,4 @@ def main():
     print("CSV generado: GE_stock_api.csv")
 
 if __name__ == '__main__':
-  main()
+    main()
