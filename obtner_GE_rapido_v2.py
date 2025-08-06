@@ -24,13 +24,6 @@ API_HEADERS = {
     'Referer': 'https://www.givingeurope.com'
 }
 
-def to_spanish_url(url: str) -> str:
-    """
-    Asegura que el path use /es_es/ en lugar de /es/ para forzar
-    la versión en español de la página.
-    """
-    return re.sub(r'/(/?iberia)/es(/|$)', r'\1/es_es\2', url)
-
 def extract_pgid_from_html(html: str) -> str:
     """
     Parsear el HTML y extraer el atributo `product` de <fg-configurator>.
@@ -71,11 +64,11 @@ def main():
         sys.exit(1)
 
     rows = []
-    for orig_url in urls:
-        print(f"Procesando URL: {orig_url}", file=sys.stderr)
-        spanish_url = to_spanish_url(orig_url)
+    for url in urls:
+        print(f"Procesando URL: {url}", file=sys.stderr)
+        # Usamos la URL original, confiando en Accept-Language
         try:
-            resp = requests.get(spanish_url, headers=HTML_HEADERS, timeout=5)
+            resp = requests.get(url, headers=HTML_HEADERS, timeout=5)
             resp.raise_for_status()
         except requests.RequestException as e:
             print(f"  [ERROR] Falló la petición HTML: {e}", file=sys.stderr)
@@ -85,7 +78,6 @@ def main():
             pgid = extract_pgid_from_html(resp.text)
         except ValueError as ve:
             print(f"  [ERROR] No pude extraer pgid: {ve}", file=sys.stderr)
-            print(f"  [DEBUG] URL solicitada: {spanish_url}", file=sys.stderr)
             print(f"  [DEBUG] HTML recibido (200 car.): {resp.text[:200]!r}", file=sys.stderr)
             continue
 
@@ -100,7 +92,7 @@ def main():
             stock_info = o.get('stock') or {}
             incs = stock_info.get('incomingStocks', [])
             rows.append({
-                'product_url':     orig_url,
+                'product_url':     url,
                 'model_parent':    o.get('productCode',''),
                 'variant_name':    o.get('name',''),
                 'variant_sku':     o.get('variantCode',''),
@@ -116,7 +108,6 @@ def main():
     # Calcular cuántas llegadas máximas hay
     max_arrivals = max((len(r['incomingStocks']) for r in rows), default=0)
 
-    # Header base y dinámico de llegadas
     base_headers = [
         'product_url','model_parent',
         'variant_name','variant_sku',
@@ -128,7 +119,6 @@ def main():
 
     all_headers = base_headers + arrival_headers
 
-    # Escribir CSV a stdout (o redirige a un archivo)
     writer = csv.DictWriter(sys.stdout, fieldnames=all_headers, lineterminator='\n')
     writer.writeheader()
     for r in rows:
