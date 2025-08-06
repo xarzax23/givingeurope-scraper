@@ -65,6 +65,12 @@ def main():
 
             print(f"  [ERROR] {e}")
 
+    if not rows:
+        with open('GE_stock_api.csv', 'w', encoding='utf-8') as f:
+            f.write("No se descargo nada")
+        print("No se encontraron datos, se generó un archivo indicando que no se descargo nada.")
+        return
+
     # calculamos máximo de llegadas
     max_arrivals = max((len(r['incomingStocks']) for r in rows), default=0)
 
@@ -80,22 +86,21 @@ def main():
 
     headers = base_headers + arrival_headers
 
-    import io
-    csvfile = io.StringIO()
-    writer = csv.DictWriter(csvfile, fieldnames=headers)
-    writer.writeheader()
-    for r in rows:
-        row = {h: r.get(h, '') for h in base_headers}
-        for idx in range(max_arrivals):
-            date_key = f'arrival_date_{idx+1}'
-            qty_key  = f'arrival_qty_{idx+1}'
-            if idx < len(r['incomingStocks']):
-                stock_entry = r['incomingStocks'][idx]
-                row[date_key] = stock_entry.get('expectedArrivalDate','').split('T')[0]
-                row[qty_key]  = stock_entry.get('quantity','')
-            else:
-                row[date_key] = row[qty_key] = ''
-        writer.writerow(row)
+    with open('GE_stock_api.csv', 'w', newline='', encoding='utf-8') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=headers)
+        writer.writeheader()
+        for r in rows:
+            row = {h: r.get(h, '') for h in base_headers}
+            for idx in range(max_arrivals):
+                date_key = f'arrival_date_{idx+1}'
+                qty_key  = f'arrival_qty_{idx+1}'
+                if idx < len(r['incomingStocks']):
+                    stock_entry = r['incomingStocks'][idx]
+                    row[date_key] = stock_entry.get('expectedArrivalDate','').split('T')[0]
+                    row[qty_key]  = stock_entry.get('quantity','')
+                else:
+                    row[date_key] = row[qty_key] = ''
+            writer.writerow(row)
 
     print("CSV generado: GE_stock_api.csv")
 
