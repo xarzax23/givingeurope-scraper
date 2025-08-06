@@ -21,6 +21,10 @@ jobs:
       - name: Install deps
         run: pip install -r requirements.txt 
 
+      - name: Install Chrome driver
+        run: |
+          sudo apt-get update
+          sudo apt-get install chromium-chromedriver
       - name: Run scraper
         run: python obtner_GE_rapido_v2.py
 
