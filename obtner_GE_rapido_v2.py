@@ -24,6 +24,13 @@ API_HEADERS = {
     'Referer': 'https://www.givingeurope.com'
 }
 
+def to_spanish_url(url: str) -> str:
+    """
+    Asegura que el path use /es_es/ en lugar de /es/ para forzar
+    la versión en español de la página.
+    """
+    return re.sub(r'/(/?iberia)/es(/|$)', r'\1/es_es\2', url)
+
 def extract_pgid_from_html(html: str) -> str:
     """
     Parsear el HTML y extraer el atributo `product` de <fg-configurator>.
@@ -64,10 +71,11 @@ def main():
         sys.exit(1)
 
     rows = []
-    for url in urls:
-        print(f"Procesando URL: {url}", file=sys.stderr)
+    for orig_url in urls:
+        print(f"Procesando URL: {orig_url}", file=sys.stderr)
+        spanish_url = to_spanish_url(orig_url)
         try:
-            resp = requests.get(url, headers=HTML_HEADERS, timeout=5)
+            resp = requests.get(spanish_url, headers=HTML_HEADERS, timeout=5)
             resp.raise_for_status()
         except requests.RequestException as e:
             print(f"  [ERROR] Falló la petición HTML: {e}", file=sys.stderr)
@@ -77,8 +85,8 @@ def main():
             pgid = extract_pgid_from_html(resp.text)
         except ValueError as ve:
             print(f"  [ERROR] No pude extraer pgid: {ve}", file=sys.stderr)
-            # Opcional: imprimir un poco de HTML para depuración:
-            print(f"  [DEBUG] HTML recibido (primeros 300 car.): {resp.text[:300]!r}", file=sys.stderr)
+            print(f"  [DEBUG] URL solicitada: {spanish_url}", file=sys.stderr)
+            print(f"  [DEBUG] HTML recibido (200 car.): {resp.text[:200]!r}", file=sys.stderr)
             continue
 
         try:
@@ -92,12 +100,12 @@ def main():
             stock_info = o.get('stock') or {}
             incs = stock_info.get('incomingStocks', [])
             rows.append({
-                'product_url':     url,
-                'model_parent':    o.get('productCode', ''),
-                'variant_name':    o.get('name', ''),
-                'variant_sku':     o.get('variantCode', ''),
-                'stock_units':     stock_info.get('quantity', ''),
-                'reserved_units':  stock_info.get('totalOption', 0),
+                'product_url':     orig_url,
+                'model_parent':    o.get('productCode',''),
+                'variant_name':    o.get('name',''),
+                'variant_sku':     o.get('variantCode',''),
+                'stock_units':     stock_info.get('quantity',''),
+                'reserved_units':  stock_info.get('totalOption',0),
                 'incomingStocks':  incs
             })
 
@@ -110,12 +118,12 @@ def main():
 
     # Header base y dinámico de llegadas
     base_headers = [
-        'product_url', 'model_parent',
-        'variant_name', 'variant_sku',
-        'stock_units', 'reserved_units'
+        'product_url','model_parent',
+        'variant_name','variant_sku',
+        'stock_units','reserved_units'
     ]
     arrival_headers = []
-    for i in range(1, max_arrivals + 1):
+    for i in range(1, max_arrivals+1):
         arrival_headers += [f'arrival_date_{i}', f'arrival_qty_{i}']
 
     all_headers = base_headers + arrival_headers
@@ -124,17 +132,16 @@ def main():
     writer = csv.DictWriter(sys.stdout, fieldnames=all_headers, lineterminator='\n')
     writer.writeheader()
     for r in rows:
-        row = {h: r.get(h, '') for h in base_headers}
+        row = {h: r.get(h,'') for h in base_headers}
         for idx in range(max_arrivals):
             date_key = f'arrival_date_{idx+1}'
             qty_key  = f'arrival_qty_{idx+1}'
             if idx < len(r['incomingStocks']):
                 entry = r['incomingStocks'][idx]
-                row[date_key] = entry.get('expectedArrivalDate', '').split('T')[0]
-                row[qty_key]  = entry.get('quantity', '')
+                row[date_key] = entry.get('expectedArrivalDate','').split('T')[0]
+                row[qty_key]  = entry.get('quantity','')
             else:
-                row[date_key] = ''
-                row[qty_key]  = ''
+                row[date_key] = row[qty_key] = ''
         writer.writerow(row)
 
     print("Proceso completado.", file=sys.stderr)
