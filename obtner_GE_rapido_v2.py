@@ -68,6 +68,7 @@ def main():
     # calculamos máximo de llegadas
     max_arrivals = max((len(r['incomingStocks']) for r in rows), default=0)
 
+
     base_headers = [
         'product_url','model_parent','variant_name','variant_sku',
         'stock_units','reserved_units'
@@ -76,23 +77,25 @@ def main():
     for i in range(1, max_arrivals+1):
         arrival_headers += [f'arrival_date_{i}', f'arrival_qty_{i}']
 
+
     headers = base_headers + arrival_headers
 
-    with open('GE_stock_api.csv', 'w', encoding='utf-8-sig', newline='') as out:
-        writer = csv.DictWriter(out, fieldnames=headers)
-        writer.writeheader()
-        for r in rows:
-            row = {h: r.get(h, '') for h in base_headers}
-            for idx in range(max_arrivals):
-                date_key = f'arrival_date_{idx+1}'
-                qty_key  = f'arrival_qty_{idx+1}'
-                if idx < len(r['incomingStocks']):
-                    stock_entry = r['incomingStocks'][idx]
-                    row[date_key] = stock_entry.get('expectedArrivalDate','').split('T')[0]
-                    row[qty_key]  = stock_entry.get('quantity','')
-                else:
-                    row[date_key] = row[qty_key] = ''
-            writer.writerow(row)
+    import io
+    csvfile = io.StringIO()
+    writer = csv.DictWriter(csvfile, fieldnames=headers)
+    writer.writeheader()
+    for r in rows:
+        row = {h: r.get(h, '') for h in base_headers}
+        for idx in range(max_arrivals):
+            date_key = f'arrival_date_{idx+1}'
+            qty_key  = f'arrival_qty_{idx+1}'
+            if idx < len(r['incomingStocks']):
+                stock_entry = r['incomingStocks'][idx]
+                row[date_key] = stock_entry.get('expectedArrivalDate','').split('T')[0]
+                row[qty_key]  = stock_entry.get('quantity','')
+            else:
+                row[date_key] = row[qty_key] = ''
+        writer.writerow(row)
 
     print("CSV generado: GE_stock_api.csv")
 
