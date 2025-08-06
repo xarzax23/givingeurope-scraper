@@ -25,9 +25,7 @@ jobs:
         run: python obtner_GE_rapido_v2.py
 
       - name: Commit updated CSV
-        uses: EndBug/add-and-commit@v9
+        uses: actions/upload-artifact@v3
         with:
-          author_name: github-actions
-          author_email: actions@github.com
-          message: "Actualiza GE_stock_api.csv"
-          add: GE_stock_api.csv
+          name: GE_stock_api.csv
+          path: GE_stock_api.csv
