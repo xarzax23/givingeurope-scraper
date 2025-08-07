@@ -1,1 +1,1 @@
-feat: adapt script to upload data to Supabase
+feat: create table if not exists

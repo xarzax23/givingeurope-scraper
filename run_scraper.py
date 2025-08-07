@@ -1,7 +1,7 @@
-
 import os
 import sys
 import requests
+import psycopg2
 from bs4 import BeautifulSoup
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -22,6 +22,37 @@ API_HEADERS = {
     'Origin': 'https://www.givingeurope.com',
     'Referer': 'https://www.givingeurope.com'
 }
+
+def create_table_if_not_exists():
+    """Connects to the database and creates the products table if it does not exist."""
+    try:
+        conn = psycopg2.connect(
+            dbname=os.environ.get("DB_NAME"),
+            user=os.environ.get("DB_USER"),
+            password=os.environ.get("DB_PASSWORD"),
+            host=os.environ.get("DB_HOST"),
+            port=os.environ.get("DB_PORT")
+        )
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS products (
+                id SERIAL PRIMARY KEY,
+                product_url TEXT,
+                model_parent TEXT,
+                variant_name TEXT,
+                variant_sku TEXT UNIQUE,
+                stock_units INTEGER,
+                reserved_units INTEGER,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        print("Table 'products' is ready.", file=sys.stderr)
+    except psycopg2.Error as e:
+        print(f"Error connecting to the database: {e}", file=sys.stderr)
+        sys.exit(1)
 
 def fetch_html_via_oxylabs(url: str) -> str:
     payload = {
@@ -66,6 +97,8 @@ def fetch_variants(pgid: str) -> list:
     return []
 
 def main():
+    create_table_if_not_exists()
+
     try:
         with open('referencias_GE.txt', encoding='utf-8') as f:
             urls = [u.strip() for u in f if u.strip()][:10]
