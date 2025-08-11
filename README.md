@@ -17,11 +17,11 @@ This script scrapes product data from Giving Europe and uploads it to a Supabase
     ```
     SUPABASE_URL=your_supabase_url
     SUPABASE_KEY=your_supabase_anon_key
-    DB_USER=your_db_user
+    DB_USER=postgres
     DB_PASSWORD=your_db_password
-    DB_HOST=your_db_host
-    DB_PORT=your_db_port
-    DB_NAME=your_db_name
+    DB_HOST=db.hzsvzvxsqcdymsqbrefx.supabase.co
+    DB_PORT=5432
+    DB_NAME=postgres
     ```
 
 3.  **The script will automatically create the `products` table if it doesn't exist.**

@@ -1,1 +1,1 @@
-docs: update README.md
+chore: remove commit_message.txt from git history
