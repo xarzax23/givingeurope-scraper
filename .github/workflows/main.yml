@@ -22,7 +22,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run scraper
-        run: python obtner_GE_rapido_v2.py
+        run: python run_scraper_v2.py.py
 
       - name: Commit updated CSV
         uses: EndBug/add-and-commit@v9
