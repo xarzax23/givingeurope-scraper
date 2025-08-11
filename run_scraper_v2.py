@@ -6,6 +6,7 @@ import csv
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from psycopg2.extras import execute_values
+from datetime import datetime
 
 load_dotenv()
 
@@ -21,14 +22,15 @@ def create_table_if_not_exists(conn):
     with conn.cursor() as cur:
         cur.execute("""
             CREATE TABLE IF NOT EXISTS products (
-                id SERIAL PRIMARY KEY,
                 product_url TEXT,
                 model_parent TEXT,
                 variant_name TEXT,
-                variant_sku TEXT UNIQUE,
+                variant_sku TEXT,
                 stock_units INTEGER,
                 reserved_units INTEGER,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+                fecha_extraccion TIMESTAMP WITH TIME ZONE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (product_url, model_parent, variant_name, variant_sku, stock_units, reserved_units, fecha_extraccion)
             );
         """)
         conn.commit()
@@ -68,7 +70,7 @@ def rows_to_tuples(rows):
     return [
         (
             r["product_url"], r["model_parent"], r["variant_name"], r["variant_sku"],
-            r["stock_units"], r["reserved_units"],
+            r["stock_units"], r["reserved_units"], r["fecha_extraccion"],
         ) for r in rows
     ]
 
@@ -80,11 +82,9 @@ def write_to_supabase(conn, rows):
                 cur,
                 """
                 INSERT INTO products (
-                    product_url, model_parent, variant_name, variant_sku, stock_units, reserved_units
+                    product_url, model_parent, variant_name, variant_sku, stock_units, reserved_units, fecha_extraccion
                 ) VALUES %s
-                ON CONFLICT (variant_sku) DO UPDATE SET
-                    stock_units = EXCLUDED.stock_units,
-                    reserved_units = EXCLUDED.reserved_units;
+                ON CONFLICT (product_url, model_parent, variant_name, variant_sku, stock_units, reserved_units, fecha_extraccion) DO NOTHING;
                 """,
                 rows_to_tuples(rows),
             )
@@ -112,6 +112,8 @@ def main():
         sys.exit(1)
 
     all_rows = []
+    current_extraction_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
     for url in urls:
         print(f"Procesando: {url}", file=sys.stderr)
         try:
@@ -140,7 +142,8 @@ def main():
                 'stock_units':         stock.get('quantity', 0),
                 'reserved_units':      stock.get('totalOption', 0),
                 'next_arrival_date':   next_date,
-                'next_arrival_qty':    next_qty
+                'next_arrival_qty':    next_qty,
+                'fecha_extraccion':    current_extraction_time
             })
 
     if not all_rows:
@@ -161,7 +164,8 @@ def main():
         'stock_units',
         'reserved_units',
         'next_arrival_date',
-        'next_arrival_qty'
+        'next_arrival_qty',
+        'fecha_extraccion'
     ]
     try:
         with open('GE_stock_api.csv', 'w', encoding='utf-8-sig', newline='') as out:
