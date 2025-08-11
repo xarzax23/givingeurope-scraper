@@ -22,7 +22,7 @@ jobs:
         run: pip install -r requirements.txt 
 
       - name: Run scraper
-        run: python obtner_GE_rapido_v2.py
+        run: python run_scraper_v2.py
 
       - name: Commit updated CSV
         uses: actions/upload-artifact@v3
